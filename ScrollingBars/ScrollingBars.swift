@@ -5,6 +5,9 @@
 //  Copyright (c) 2015年 Hori Taisuke. All rights reserved.
 //
 
+import Foundation
+import UIKit
+
 public protocol ScrollingBarsDelegate {
     var topBarPosition: CGFloat { get set }
     var topBarHeight: CGFloat { get }
@@ -15,27 +18,27 @@ public protocol ScrollingBarsDelegate {
 }
 
 public class ScrollingBars: NSObject, UIScrollViewDelegate {
-
+    
     var scrollView: UIScrollView!
     var delegate: ScrollingBarsDelegate!
     var proxyDelegate: UIScrollViewDelegate?
-
+    
     var isScrollViewDragging: Bool = false
     var scrollBeginOffset: CGPoint = CGPoint()
     var scrollPrevPoint: CGPoint = CGPoint()
     var scrollDirection: Int = 0
     var isScrollFromBottomLine: Bool = false
     var isUpdateingInset: Bool = false
-
+    
     // MARK: public
-
+    
     public func follow(scrollView : UIScrollView, delegate: ScrollingBarsDelegate) {
         self.scrollView = scrollView
         self.delegate = delegate
         self.updateContentInset()
     }
     
-    public func showBars(#animate: Bool) {
+    public func showBars(_ animate: Bool) {
         let changeFunc: () -> Void = {
             self.delegate.topBarPosition = 0
             self.delegate.bottomBarPosition = 0
@@ -43,15 +46,15 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
         }
         if (animate) {
             // workaround for smooth animation
-            dispatch_async(dispatch_get_main_queue()) {
-                UIView.animateWithDuration(self.animationDuration, animations: changeFunc)
+            DispatchQueue.main.async() {
+                UIView.animate(withDuration: self.animationDuration, animations: changeFunc, completion: nil)
             }
         } else {
             changeFunc()
         }
     }
-
-    public func hideBars(#animate: Bool) {
+    
+    public func hideBars(_ animate: Bool) {
         let changeFunc: () -> Void = {
             self.delegate.topBarPosition = self.topBarMaxPosition()
             self.delegate.bottomBarPosition = self.bottomBarMaxPosition()
@@ -59,36 +62,36 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
         }
         if (animate) {
             // workaround for smooth animation
-            dispatch_async(dispatch_get_main_queue()) {
-                UIView.animateWithDuration(self.animationDuration, animations: changeFunc, completion:nil)
+            DispatchQueue.main.async() {
+                UIView.animate(withDuration: self.animationDuration, animations: changeFunc, completion:nil)
             }
         } else {
             changeFunc()
         }
     }
     
-    public func refresh(#animated: Bool) {
+    public func refresh(_ animated: Bool) {
         if self.delegate == nil {
             return
         }
-
+        
         if self.isTopBarHidden() || self.isBottomBarHidden() {
-            self.hideBars(animate: animated)
+            self.hideBars(animated)
         } else {
-            self.showBars(animate: animated)
+            self.showBars(animated)
         }
     }
     
     // MARK: - ScrollView Delegate
-
-    public func scrollViewWillBeginDragging(scrollView: UIScrollView) {
+    
+    public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
         self.scrollBeginOffset = self.scrollView.contentOffset
-        self.scrollPrevPoint = scrollView.panGestureRecognizer.locationInView(scrollView.superview)
+        self.scrollPrevPoint = scrollView.panGestureRecognizer.location(in: scrollView.superview)
         self.isScrollViewDragging = true
-        self.isScrollFromBottomLine = scrollView.contentSize.height - scrollView.frame.size.height <= self.scrollBeginOffset.y + CGFloat(FLT_EPSILON) && (self.isBottomBarHidden() || self.bottomBarMaxPosition() == 0)
+        self.isScrollFromBottomLine = scrollView.contentSize.height - scrollView.frame.size.height <= self.scrollBeginOffset.y + CGFloat(Float.ulpOfOne) && (self.isBottomBarHidden() || self.bottomBarMaxPosition() == 0)
     }
-
-    public func scrollViewDidEndDragging(scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+    
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         self.isScrollViewDragging = false
         
         if !decelerate {
@@ -96,15 +99,15 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
                 let isUnderTopBar = scrollView.contentOffset.y < -self.delegate.topBarMinHeight
                 let appearRatio = self.delegate.bottomBarPosition / self.bottomBarMaxPosition()
                 if isUnderTopBar || appearRatio <=  self.barAppearThreshold {
-                    self.showBars(animate: true)
+                    self.showBars(true)
                 } else {
-                    self.hideBars(animate: true)
+                    self.hideBars(true)
                 }
             }
         }
     }
-
-    public func scrollViewDidScroll(scrollView: UIScrollView) {
+    
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.isScrollViewDragging {
             return
         }
@@ -112,9 +115,9 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
             return
         }
         
-
-        let currentPoint = scrollView.panGestureRecognizer.locationInView(scrollView.superview)
-
+        
+        let currentPoint = scrollView.panGestureRecognizer.location(in: scrollView.superview)
+        
         if currentPoint.y == self.scrollPrevPoint.y {
             self.scrollDirection = 0
         } else if currentPoint.y < self.scrollPrevPoint.y {
@@ -122,18 +125,18 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
         } else {
             self.scrollDirection = -1
         }
-
+        
         let scrollDistanceFromPrev = -(currentPoint.y - self.scrollPrevPoint.y)
         self.scrollPrevPoint = currentPoint
-
-        let isSmallContentSize = scrollView.contentSize.height <= scrollView.frame.size.height - self.delegate.topBarHeight + CGFloat(FLT_EPSILON)
-        let isScrollOverBottom = scrollView.contentOffset.y + scrollView.frame.size.height > scrollView.contentSize.height - CGFloat(FLT_EPSILON)
-
+        
+        let isSmallContentSize = scrollView.contentSize.height <= scrollView.frame.size.height - self.delegate.topBarHeight + CGFloat(Float.ulpOfOne)
+        let isScrollOverBottom = scrollView.contentOffset.y + scrollView.frame.size.height > scrollView.contentSize.height - CGFloat(Float.ulpOfOne)
+        
         if isSmallContentSize {
             // do nothing
         } else if isScrollOverBottom {
             if self.isBottomBarHidden() && self.isScrollFromBottomLine {
-                self.showBars(animate: true)
+                self.showBars(true)
             }
         } else {
             let isUnderTopBar = scrollView.contentOffset.y < -self.delegate.topBarMinHeight && scrollView.contentOffset.y >= -self.delegate.topBarHeight
@@ -143,35 +146,35 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
             }
             if (!self.isBottomBarHidden() || isUnderTopBar) && !isOverUnderTopBar {
                 self.delegate.bottomBarPosition = min(self.bottomBarMaxPosition(), max(0, scrollDistanceFromPrev + self.delegate.bottomBarPosition))
-                let prevTop = self.scrollView.contentInset.top
+                //                let prevTop = self.scrollView.contentInset.top
                 self.updateContentInset()
             }
         }
     }
     
-    public func scrollViewWillBeginDecelerating(scrollView: UIScrollView) {
+    public func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
         if self.scrollDirection < 0 {
             if !self.isTopBarFullAppear() || !self.isBottomBarFullAppear() {
-                self.showBars(animate: true)
+                self.showBars(true)
             }
         } else if self.scrollDirection > 0 {
-            let isScrollOverBottom = scrollView.contentOffset.y + scrollView.frame.size.height > scrollView.contentSize.height - CGFloat(FLT_EPSILON)
+            let isScrollOverBottom = scrollView.contentOffset.y + scrollView.frame.size.height > scrollView.contentSize.height - CGFloat(Float.ulpOfOne)
             if !(self.isTopBarHidden() && self.isBottomBarHidden()) && !(self.isBottomBarFullAppear() && (isScrollOverBottom || scrollView.contentOffset.y < 0)) {
-                self.hideBars(animate: true)
+                self.hideBars(true)
             }
         }
     }
     
-    public func scrollViewShouldScrollToTop(scrollView: UIScrollView) -> Bool {
+    public func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
         if !self.isTopBarFullAppear() {
-            self.showBars(animate: true)
+            self.showBars(true)
             return false
         }
         return true
     }
-
+    
     // MARK: - Internal Func
-
+    
     func updateContentInset() {
         self.isUpdateingInset = true
         self.scrollView.contentInset = UIEdgeInsetsMake(
@@ -184,8 +187,8 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
     }
     
     // MARK: - Constants
-
-    var animationDuration: NSTimeInterval {
+    
+    var animationDuration: TimeInterval {
         return 0.2
     }
     
@@ -202,11 +205,11 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
     func isTopBarHidden() -> Bool {
         return self.delegate.topBarPosition >= self.topBarMaxPosition()
     }
-
+    
     func isTopBarFullAppear() -> Bool {
         return self.delegate.topBarPosition == 0
     }
-
+    
     func isTopBarHalfWay() -> Bool {
         return !isTopBarHidden() && !isTopBarFullAppear()
     }
@@ -218,7 +221,7 @@ public class ScrollingBars: NSObject, UIScrollViewDelegate {
     func isBottomBarHidden() -> Bool {
         return self.delegate.bottomBarPosition >= self.bottomBarMaxPosition()
     }
-
+    
     func isBottomBarFullAppear() -> Bool {
         return self.delegate.bottomBarPosition == 0
     }
