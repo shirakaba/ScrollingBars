@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import ScrollingBars
+//import ScrollingBars
 
 class ViewController: UIViewController, ScrollingBarsDelegate, UIWebViewDelegate {
 
@@ -49,7 +49,7 @@ class ViewController: UIViewController, ScrollingBarsDelegate, UIWebViewDelegate
             // In-Call statusbar
             return 0
         } else {
-            return UIApplication.shared.statusBarFrame.size.height
+            return UIApplication.shared.statusBarFrame.size.height + 20 // +20 keeps a title view visible.
         }
     }
 
