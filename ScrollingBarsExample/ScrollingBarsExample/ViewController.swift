@@ -60,7 +60,7 @@ class ViewController: UIViewController, ScrollingBarsDelegate, UIWebViewDelegate
         set {
             self.topBarTopSpaceConstraint.constant = -newValue
             let hiddingRatio = newValue / (self.topBarHeight - self.topBarMinHeight)
-            self.setTopBarElementAlpha(1 - hiddingRatio)
+            self.setTopBarElementAlpha(/*1- */ hiddingRatio)
             self.topBar.layoutIfNeeded()
         }
     }
